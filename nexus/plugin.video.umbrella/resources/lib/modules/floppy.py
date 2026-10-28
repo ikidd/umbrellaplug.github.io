@@ -49,7 +49,7 @@ def floppyBaseUrl():
 
 
 def getFloppyCredentialsInfo():
-	return bool(floppyBaseUrl() and getSetting('floppy.token'))
+	return bool(floppyBaseUrl() and getSetting('floppy.token') and getSetting('floppy.isauthed') == 'true')
 
 
 def getFloppyIndicatorsInfo():
@@ -180,17 +180,19 @@ def floppyAuth(fromSettings=0):
 			return False
 		setSetting('floppy.isauthed', 'true')
 		control.notification(message='Floppy Authorized Successfully', icon=floppy_icon)
+		use_provider = control.yesnoDialog('Do you want to set Floppy as your service for your watched and unwatched indicators?', '', '', 'Indicators', 'No', 'Yes')
+		if use_provider:
+			control.homeWindow.setProperty('umbrella.updateSettings', 'false')
+			setSetting('indicators.alt', '5')
+			setSetting('scrobble.source', '5')
+			control.homeWindow.setProperty('umbrella.updateSettings', 'true')
+			setSetting('scrobble', 'Floppy')
+			setSetting('indicators', 'Floppy')
+			control.notification(message='Floppy Indicators Enabled - Syncing Watched Data...')
+			# Run the initial pull in its own plugin invocation. Kodi may tear down
+			# threads created by this short-lived settings action as soon as it exits.
+			control.execute('RunPlugin(plugin://plugin.video.umbrella/?action=floppyAuthSync)')
 		if fromSettings == 1: control.openSettings('5.6', 'plugin.video.umbrella')
-		if not control.yesnoDialog('Do you want to set Floppy as your service for your watched and unwatched indicators?', '', '', 'Indicators', 'No', 'Yes'): return True
-		control.homeWindow.setProperty('umbrella.updateSettings', 'false')
-		setSetting('indicators.alt', '5')
-		setSetting('scrobble.source', '5')
-		control.homeWindow.setProperty('umbrella.updateSettings', 'true')
-		setSetting('scrobble', 'Floppy')
-		setSetting('indicators', 'Floppy')
-		control.notification(message='Floppy Indicators Enabled - Syncing Watched Data...')
-		from threading import Thread
-		Thread(target=sync_watched, kwargs={'forced': True}).start()
 		return True
 	except:
 		log_utils.error()
@@ -199,8 +201,6 @@ def floppyAuth(fromSettings=0):
 
 def floppyRevoke(fromSettings=0):
 	control.homeWindow.setProperty('umbrella.updateSettings', 'false')
-	setSetting('floppy.user.name', '')
-	setSetting('floppy.token', '')
 	setSetting('floppy.isauthed', '')
 	control.homeWindow.setProperty('umbrella.updateSettings', 'true')
 	try:
@@ -218,8 +218,8 @@ def floppyRevoke(fromSettings=0):
 			setSetting('scrobble', 'Local')
 		setSetting('floppy.markwatched', 'false')
 		if fromSettings == 1:
-			control.openSettings('5.6', 'plugin.video.umbrella')
 			control.dialog.ok('Floppy', 'Floppy Authorization Revoked')
+			control.openSettings('5.6', 'plugin.video.umbrella')
 	except:
 		log_utils.error()
 

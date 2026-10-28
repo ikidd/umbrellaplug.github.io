@@ -3519,7 +3519,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="floppy.fastsync.auto" type="boolean" label="Automatic fast synchronization" help="Enable compact snapshot and incremental Floppy synchronization.">
+				<setting id="floppy.fastsync.auto" type="boolean" label="40844" help="40845">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>

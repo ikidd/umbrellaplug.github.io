@@ -1,4 +1,4 @@
-﻿﻿# Addon Name: Umbrella
+﻿# Addon Name: Umbrella
 # Addon id: plugin.video.umbrella
 # Addon Provider: Umbrella
 # Daniel Szurgot, 2015
@@ -7373,4 +7373,12 @@ msgstr ""
 
 msgctxt "#40843"
 msgid "Date, Day and Time"
+msgstr ""
+
+msgctxt "#40844"
+msgid "Automatic fast synchronization"
+msgstr ""
+
+msgctxt "#40845"
+msgid "Enable compact snapshot and incremental Floppy synchronization."
 msgstr ""

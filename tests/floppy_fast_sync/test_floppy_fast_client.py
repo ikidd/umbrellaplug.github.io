@@ -3,6 +3,7 @@ import importlib
 import sys
 import types
 import unittest
+import xml.etree.ElementTree as ET
 
 from tests.floppy_fast_sync import kodi_stubs
 
@@ -127,10 +128,44 @@ class FastSyncClientTests(unittest.TestCase):
 
 	def test_automatic_fast_sync_has_an_explicit_safe_default_toggle(self):
 		path = kodi_stubs.addon_root('matrix') + '/resources/settings.xml'
+		root = ET.parse(path).getroot()
+		setting = root.find(".//setting[@id='floppy.fastsync.auto']")
+		self.assertIsNotNone(setting)
+		self.assertEqual(setting.get('label'), '40844')
+		self.assertEqual(setting.get('help'), '40845')
+		self.assertEqual(setting.findtext('default'), 'false')
+		language = kodi_stubs.addon_root('matrix') + '/resources/language/resource.language.en_gb/strings.po'
+		with open(language, 'r') as handle: strings = handle.read()
+		self.assertIn('msgctxt "#40844"\nmsgid "Automatic fast synchronization"', strings)
+		self.assertIn('msgctxt "#40845"\nmsgid "Enable compact snapshot and incremental Floppy synchronization."', strings)
+
+	def test_floppy_credentials_require_successful_authorization(self):
+		path = kodi_stubs.tree_file('matrix', 'modules/floppy.py')
 		with open(path, 'r') as handle: source = handle.read()
-		self.assertIn('id="floppy.fastsync.auto"', source)
-		fragment = source.split('id="floppy.fastsync.auto"', 1)[1].split('</setting>', 1)[0]
-		self.assertIn('<default>false</default>', fragment)
+		block = source.split('def getFloppyCredentialsInfo():', 1)[1].split('\n\ndef ', 1)[0]
+		self.assertIn("getSetting('floppy.isauthed') == 'true'", block)
+
+	def test_floppy_revoke_preserves_static_credentials_and_reopens_after_confirmation(self):
+		path = kodi_stubs.tree_file('matrix', 'modules/floppy.py')
+		with open(path, 'r') as handle: source = handle.read()
+		block = source.split('def floppyRevoke(fromSettings=0):', 1)[1].split('\n\ndef ', 1)[0]
+		self.assertNotIn("setSetting('floppy.token', '')", block)
+		self.assertNotIn("setSetting('floppy.user.name', '')", block)
+		self.assertLess(block.index("control.dialog.ok('Floppy'"), block.index("control.openSettings('5.6'"))
+
+	def test_floppy_auth_reopens_settings_after_provider_selection(self):
+		path = kodi_stubs.tree_file('matrix', 'modules/floppy.py')
+		with open(path, 'r') as handle: source = handle.read()
+		block = source.split('def floppyAuth(fromSettings=0):', 1)[1].split('\n\ndef ', 1)[0]
+		success = block.split("setSetting('floppy.isauthed', 'true')", 1)[1]
+		self.assertLess(success.index("setSetting('indicators.alt', '5')"), success.rindex("control.openSettings('5.6'"))
+		self.assertLess(success.index("setSetting('scrobble.source', '5')"), success.rindex("control.openSettings('5.6'"))
+		self.assertIn("RunPlugin(plugin://plugin.video.umbrella/?action=floppyAuthSync)", success)
+		self.assertNotIn('Thread(target=sync_watched', success)
+		router = kodi_stubs.tree_file('matrix', 'modules/router.py')
+		with open(router, 'r') as handle: router_source = handle.read()
+		route = router_source.split("elif action == 'floppyAuthSync':", 1)[1].split("\n	elif action ==", 1)[0]
+		self.assertIn('floppy.sync_watched(forced=True)', route)
 
 	def test_forced_sync_does_not_clear_watched_cache_before_network_success(self):
 		path = kodi_stubs.tree_file('matrix', 'modules/floppy.py')
